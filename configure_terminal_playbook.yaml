@@ -1,0 +1,93 @@
+---
+- name: Configure Terminal
+  hosts: localhost
+  vars:
+    ansible_user: "CHANGE_ME"
+
+  tasks:
+    - name: Install Fonts
+      unarchive:
+        src: 0xProto.zip
+        dest: /usr/local/share/fonts/
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: 0644
+
+    - name: Install oh-my-bash
+      command: bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)"
+      args:
+        creates: /home/{{ ansible_user }}/.oh-my-bash
+
+    - name: copy .bashrc
+      template:
+        src: "{{ playbook_dir }}/.bashrc.j2"
+        dest: /home/{{ ansible_user }}/.bashrc
+        force: yes
+      become: true
+
+    - name: Install Tmux
+      apt:
+        name: tmux
+        state: present
+      become: true
+
+    - name: Install oh-my-tmux
+      git:
+        repo: https://github.com/gpakosz/.tmux.git
+        dest: /home/{{ ansible_user }}/.tmux/
+        clone: yes
+      ignore_errors: yes
+
+    - name: Create a simlink to the tmux configuration
+      file:
+        src: /home/{{ ansible_user }}/.tmux/.tmux.conf
+        dest: /home/{{ ansible_user }}/.tmux.conf
+        state: link
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        force: yes
+      become: true
+    
+    - name: Copy directories
+      copy:
+        src: /home/{{ ansible_user }}/.tmux/.tmux.conf.local
+        dest: /home/{{ ansible_user }}/.
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: 0755
+
+    - name: Install catpuccing for alacritty 
+      command: curl -LO --output-dir /home/{{ ansible_user }}/.config/alacritty https://github.com/catppuccin/alacritty/raw/main/catppuccin-mocha.toml
+      args:
+        creates: /home/{{ ansible_user }}/.config/alacritty/catppuccin-mocha.toml
+
+    - name: Install Alacritty with script
+      command: ./alacritty_install.sh
+      args:
+        creates: /usr/local/bin/alacritty
+      become: true
+
+    - name: Copy Alacritty Configuration
+      copy:
+        src: ./alacritty.toml
+        dest: /home/{{ ansible_user }}/.config/alacritty/alacritty.yml
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: 0644
+
+    - name: Copy Tmux Configuration
+      copy:
+        src: ./.tmux.conf
+        dest: /home/{{ ansible_user }}/.tmux.conf
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: 0644
+
+    - name: Copy tmux local configuration
+      copy:
+        src: ./.tmux.conf.local
+        dest: /home/{{ ansible_user }}/.tmux.conf.local
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: 0644
+
